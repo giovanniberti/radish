@@ -10,10 +10,10 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class TwitterImageCrawler {
-    private static final String ACCESS_TOKEN = Dotenv.load().get("ACCESS_TOKEN");
-    private static final String ACCESS_TOKEN_SECRET = Dotenv.load().get("ACCESS_TOKEN_SECRET");
-    private static final String API_KEY = Dotenv.load().get("API_KEY");
-    private static final String API_SECRET_KEY = Dotenv.load().get("API_SECRET_KEY");
+    private static final String ACCESS_TOKEN = Config.getInstance().accessToken;
+    private static final String ACCESS_TOKEN_SECRET = Config.getInstance().accessTokenSecret;
+    private static final String API_KEY = Config.getInstance().apiKey;
+    private static final String API_SECRET_KEY = Config.getInstance().apiSecretKey;
 
     private Twitter twitter;
 
