@@ -13,10 +13,10 @@ version '1.0-SNAPSHOT'
 sourceCompatibility = 1.8
 
 repositories {
-    mavenCentral()
     maven {
         url "https://plugins.gradle.org/m2/"
     }
+    mavenCentral()
 }
 
 dependencies {
@@ -31,6 +31,8 @@ dependencies {
     implementation group: 'org.apache.hbase', name: 'hbase-shaded-client', version: '2.2.3'
     implementation group: 'org.apache.hbase', name: 'hbase-mapreduce', version: '2.2.3'
     implementation files("./LIRE-1.0_b04.jar")
+    implementation group: "org.apache.storm", name: "storm-core", version: "2.1.0"
+    implementation group: "org.apache.storm", name: "storm-hbase", version: "2.1.0"
 }
 
 sourceSets.main.java.srcDirs = ['src/main/java']
@@ -38,8 +40,12 @@ sourceSets.main.java.srcDirs = ['src/main/java']
 jar {
     manifest {
         attributes(
-                'Class-Path': configurations.compile.collect { it.getName() }.join(' '),
                 'Main-Class': 'radish.Radish'
         )
     }
+}
+
+shadowJar {
+    zip64 true
+    exclude "defaults.yaml"
 }
