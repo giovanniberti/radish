@@ -11,7 +11,9 @@ import winterwell.jtwitter.Twitter;
 import winterwell.jtwitter.TwitterStream;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class RadishTopology extends ConfigurableTopology {
     private static final String ACCESS_TOKEN = Config.getInstance().accessToken;
@@ -44,8 +46,14 @@ public class RadishTopology extends ConfigurableTopology {
                 .withColumnFields(new Fields("keyword", "image_path"))
                 .withColumnFamily("data");
 
-        HBaseBolt hBaseBolt = new HBaseBolt("radish", mapper);
-                //.withConfigKey("hbase.conf");
+
+        Map<String, String> hBaseConfig = new HashMap<>();
+        hBaseConfig.put("hbase.rootdir", "hdfs://namenode:9000/hbase");
+
+        conf.put("hbase.config", hBaseConfig);
+
+        HBaseBolt hBaseBolt = new HBaseBolt("radish", mapper)
+                .withConfigKey("hbase.config");
 
         builder.setBolt(HBASE_BOLT, hBaseBolt).shuffleGrouping(DOWNLOAD_BOLT);
 
