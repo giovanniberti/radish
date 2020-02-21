@@ -1,5 +1,7 @@
 package radish.speed;
 
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
@@ -15,6 +17,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class TwitterSpout extends BaseRichSpout {
+    private static final Logger logger = LogManager.getLogger(TwitterSpout.class);
+
     private SpoutOutputCollector collector;
     private String keyword;
     private List<String> urlsToProcess = new ArrayList<>();
@@ -48,6 +52,8 @@ public class TwitterSpout extends BaseRichSpout {
                         .filter(Objects::nonNull)
                         .collect(Collectors.toList());
 
+                logger.debug("Received " + mediaUrls.size() + " new tweets. Adding them to spout.");
+
                 urlsToProcess.addAll(mediaUrls);
 
                 return true;
@@ -67,6 +73,7 @@ public class TwitterSpout extends BaseRichSpout {
 
     @Override
     public void nextTuple() {
+        logger.debug("emitting most recent received tweets");
         for (Iterator<String> iterator = urlsToProcess.iterator(); iterator.hasNext(); ) {
             String url = iterator.next();
             collector.emit(new Values(keyword, url));
