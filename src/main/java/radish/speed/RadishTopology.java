@@ -49,6 +49,7 @@ public class RadishTopology extends ConfigurableTopology {
 
         Map<String, String> hBaseConfig = new HashMap<>();
         hBaseConfig.put("hbase.rootdir", "hdfs://namenode:9000/hbase");
+        hBaseConfig.put("hbase.zookeeper.quorum", "zoo");
 
         conf.put("hbase.config", hBaseConfig);
 
@@ -59,6 +60,12 @@ public class RadishTopology extends ConfigurableTopology {
 
         List<String> nimbusSeeds = new ArrayList<>();
         nimbusSeeds.add("nimbus");
+        conf.put("nimbus.seeds", nimbusSeeds);
+
+        List<String> zookeeperServers = new ArrayList<>();
+        zookeeperServers.add("zoo");
+        conf.put("storm.zookeeper.servers", zookeeperServers);
+
         return submit("RADISH_TOPOLOGY", conf, builder);
     }
 
