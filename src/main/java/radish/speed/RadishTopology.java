@@ -1,5 +1,8 @@
 package radish.speed;
 
+import clojure.lang.IFn;
+import org.apache.storm.LocalCluster;
+import org.apache.storm.generated.StormTopology;
 import org.apache.storm.hbase.bolt.HBaseBolt;
 import org.apache.storm.hbase.bolt.mapper.SimpleHBaseMapper;
 import org.apache.storm.topology.ConfigurableTopology;
@@ -15,7 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class RadishTopology extends ConfigurableTopology {
+public class RadishTopology {
     private static final String ACCESS_TOKEN = Config.getInstance().accessToken;
     private static final String ACCESS_TOKEN_SECRET = Config.getInstance().accessTokenSecret;
     private static final String API_KEY = Config.getInstance().apiKey;
@@ -26,10 +29,11 @@ public class RadishTopology extends ConfigurableTopology {
     private static final String HBASE_BOLT = "HBASE_BOLT";
 
 
-    @Override
-    protected int run(String[] args) throws Exception {
+    public static void main(String[] args) throws Exception {
+        args = new String[]{"apple"};
         String keyword = args[0];
 
+        org.apache.storm.Config conf = new org.apache.storm.Config();
         TopologyBuilder builder = new TopologyBuilder();
 
         OAuthSignpostClient client = new OAuthSignpostClient(API_KEY, API_SECRET_KEY, ACCESS_TOKEN, ACCESS_TOKEN_SECRET);
@@ -66,13 +70,9 @@ public class RadishTopology extends ConfigurableTopology {
         zookeeperServers.add("zoo");
         conf.put("storm.zookeeper.servers", zookeeperServers);
 
-        return submit("RADISH_TOPOLOGY", conf, builder);
-    }
+        StormTopology topology = builder.createTopology();
 
-    public static void main(String[] args) {
-        ConfigurableTopology topology = new RadishTopology();
-        args = new String[]{"apple"};
-
-        ConfigurableTopology.start(topology, args);
+        LocalCluster localCluster = new LocalCluster();
+        localCluster.submitTopology("RADISH_TOPOLOGY", conf, topology);
     }
 }
