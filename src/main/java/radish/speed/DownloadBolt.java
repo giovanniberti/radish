@@ -39,6 +39,7 @@ public class DownloadBolt extends BaseRichBolt {
 
     @Override
     public void execute(Tuple input) {
+        logger.info("### DOWNLOADING " + input);
         String keyword = input.getStringByField("keyword");
         String rawURL = input.getStringByField("image_url");
 
@@ -48,7 +49,7 @@ public class DownloadBolt extends BaseRichBolt {
             FileSystem fileSystem = FileSystem.get(config);
             logger.warn("*** Filesystem: " + fileSystem.getUri());
             URL url = new URL(rawURL);
-            Path path = new Path("/images/" + keyword + "/" + url.getFile());
+            Path path = new Path(String.valueOf(Paths.get("/images/", keyword, url.getFile())));
 
             try (InputStream imageStream = url.openStream(); OutputStream fileStream = fileSystem.create(path).getWrappedStream()) {
                 IOUtils.copy(imageStream, fileStream);
