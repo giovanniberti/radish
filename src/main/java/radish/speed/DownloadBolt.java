@@ -45,7 +45,8 @@ public class DownloadBolt extends BaseRichBolt {
         Configuration config = new Configuration();
 
         try {
-            FileSystem fileSystem = FileSystem.get(URI.create("hdfs://localhost"), config);
+            FileSystem fileSystem = FileSystem.get(config);
+            logger.warn("*** Filesystem: " + fileSystem.getUri());
             URL url = new URL(rawURL);
             Path path = new Path("/images/" + keyword + "/" + url.getFile());
 
