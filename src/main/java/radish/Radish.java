@@ -18,8 +18,6 @@ public class Radish extends Configured implements Tool {
 
         job.setJarByClass(Radish.class);
 
-        job.setMapperClass(URLImageDownloader.class);
-
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(Text.class);
 
