@@ -1,4 +1,4 @@
-package radish;
+package radish.speed;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -11,15 +11,20 @@ import org.apache.storm.topology.base.BaseRichBolt;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URL;
+import java.nio.file.Paths;
 import java.util.Map;
+import java.util.UUID;
 
 public class DownloadBolt extends BaseRichBolt {
+    private static final Logger logger = LoggerFactory.getLogger(RadishTopology.class);
     private OutputCollector collector;
 
     @Override
@@ -29,7 +34,7 @@ public class DownloadBolt extends BaseRichBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("keyword", "image_path"));
+        declarer.declare(new Fields("id", "keyword", "image_path"));
     }
 
     @Override
@@ -48,7 +53,8 @@ public class DownloadBolt extends BaseRichBolt {
                 IOUtils.copy(imageStream, fileStream);
             }
 
-            collector.emit(new Values(keyword, path.toString()));
+            logger.info("### Finished downloading: " + path);
+            collector.emit(new Values(UUID.randomUUID().toString(), keyword, path.toString()));
             collector.ack(input);
         } catch (IOException e) {
             collector.fail(input);
