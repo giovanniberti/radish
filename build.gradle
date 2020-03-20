@@ -60,7 +60,7 @@ dependencies {
     implementation group: "org.apache.storm", name: "storm-hbase", version: "2.1.0"
     implementation group: "org.twitter4j", name: "twitter4j-core", version: "4.0.4"
     implementation group: "org.twitter4j", name: "twitter4j-stream", version: "4.0.4"
-//    implementation group: 'ch.qos.logback', name: "logback-classic", version: "1.2.3"
+    implementation group: 'ch.qos.logback', name: "logback-classic", version: "1.2.3"
     implementation group: 'commons-cli', name: 'commons-cli', version: '1.4'
 }
 
