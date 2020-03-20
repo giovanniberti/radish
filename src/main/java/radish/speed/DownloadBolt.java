@@ -1,10 +1,9 @@
-package radish.speed;
+package radish;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.Text;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
@@ -16,9 +15,9 @@ import org.apache.storm.tuple.Values;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URI;
 import java.net.URL;
 import java.util.Map;
-import java.util.UUID;
 
 public class DownloadBolt extends BaseRichBolt {
     private OutputCollector collector;
@@ -36,11 +35,12 @@ public class DownloadBolt extends BaseRichBolt {
     @Override
     public void execute(Tuple input) {
         String keyword = input.getStringByField("keyword");
-        String rawURL = input.getStringByField("url");
+        String rawURL = input.getStringByField("image_url");
 
         Configuration config = new Configuration();
+
         try {
-            FileSystem fileSystem = FileSystem.get(config);
+            FileSystem fileSystem = FileSystem.get(URI.create("hdfs://localhost"), config);
             URL url = new URL(rawURL);
             Path path = new Path("/images/" + keyword + "/" + url.getFile());
 
