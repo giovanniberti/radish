@@ -47,7 +47,6 @@ public class DownloadBolt extends BaseRichBolt {
 
         try {
             FileSystem fileSystem = FileSystem.get(config);
-            logger.warn("*** Filesystem: " + fileSystem.getUri());
             URL url = new URL(rawURL);
             Path path = new Path(String.valueOf(Paths.get("/images/", keyword, url.getFile())));
 
