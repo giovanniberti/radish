@@ -1,6 +1,7 @@
 package radish;
 
 import io.github.cdimascio.dotenv.Dotenv;
+import org.apache.hadoop.conf.Configuration;
 
 public class Config {
 
@@ -9,6 +10,7 @@ public class Config {
     public final String accessTokenSecret;
     public final String apiKey;
     public final String apiSecretKey;
+    public final Configuration hadoopConfiguration;
     private final boolean localMode;
 
     public Config(boolean localMode, String accessToken, String accessTokenSecret, String apiKey, String apiSecretKey) {
@@ -17,6 +19,11 @@ public class Config {
         this.accessTokenSecret = accessTokenSecret;
         this.apiKey = apiKey;
         this.apiSecretKey = apiSecretKey;
+        this.hadoopConfiguration = new Configuration();
+
+        if (localMode) {
+            hadoopConfiguration.set("fs.defaultFS", "hdfs://localhost:9000");
+        }
     }
 
     public Config(String accessToken, String accessTokenSecret, String apiKey, String apiSecretKey) {

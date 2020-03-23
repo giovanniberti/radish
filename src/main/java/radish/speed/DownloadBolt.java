@@ -43,7 +43,7 @@ public class DownloadBolt extends BaseRichBolt {
         String keyword = input.getStringByField("keyword");
         String rawURL = input.getStringByField("image_url");
 
-        Configuration config = new Configuration();
+        Configuration config = Config.getInstance().hadoopConfiguration;
 
         try {
             FileSystem fileSystem = FileSystem.get(config);
