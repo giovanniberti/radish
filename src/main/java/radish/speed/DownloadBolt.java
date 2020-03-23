@@ -13,18 +13,18 @@ import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import radish.Config;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.URI;
 import java.net.URL;
 import java.nio.file.Paths;
 import java.util.Map;
 import java.util.UUID;
 
 public class DownloadBolt extends BaseRichBolt {
-    private static final Logger logger = LoggerFactory.getLogger(RadishTopology.class);
+    private static final Logger logger = LoggerFactory.getLogger(DownloadBolt.class);
     private OutputCollector collector;
 
     @Override
