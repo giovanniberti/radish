@@ -2,6 +2,7 @@ package radish.speed;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.storm.task.OutputCollector;
@@ -17,7 +18,6 @@ import radish.Config;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.URL;
 import java.nio.file.Paths;
 import java.util.Map;
@@ -50,8 +50,9 @@ public class DownloadBolt extends BaseRichBolt {
             URL url = new URL(rawURL);
             Path path = new Path(String.valueOf(Paths.get("/images/", keyword, url.getFile())));
 
-            try (InputStream imageStream = url.openStream(); OutputStream fileStream = fileSystem.create(path).getWrappedStream()) {
+            try (InputStream imageStream = url.openStream(); FSDataOutputStream fileStream = fileSystem.create(path)) {
                 IOUtils.copy(imageStream, fileStream);
+                fileStream.hsync();
             }
 
             logger.info("### Finished downloading: " + path);
