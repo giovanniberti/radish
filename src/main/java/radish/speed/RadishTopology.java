@@ -1,8 +1,6 @@
 package radish.speed;
 
 import org.apache.commons.cli.*;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.storm.LocalCluster;
 import org.apache.storm.generated.KillOptions;
 import org.apache.storm.generated.StormTopology;
@@ -16,7 +14,6 @@ import org.slf4j.LoggerFactory;
 import radish.Config;
 import twitter4j.auth.AccessToken;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -28,6 +25,8 @@ public class RadishTopology extends ConfigurableTopology {
     private static final String TWITTER_SPOUT = "TWITTER_SPOUT";
     private static final String DOWNLOAD_BOLT = "DOWNLOAD_BOLT";
     private static final String HBASE_BOLT = "HBASE_BOLT";
+    private static final String FEATURE_BOLT = "FEATURE_BOLT";
+    private static final String FEATURE_DB_BOLT = "FEATURE_DB_BOLT";
 
     public static void main(String[] args) throws Exception {
         String keyword = "apple";
@@ -141,6 +140,18 @@ public class RadishTopology extends ConfigurableTopology {
                 .withConfigKey("hbase.config");
 
         builder.setBolt(HBASE_BOLT, hBaseBolt).shuffleGrouping(DOWNLOAD_BOLT);
+
+        builder.setBolt(FEATURE_BOLT, new FeatureBolt()).shuffleGrouping(DOWNLOAD_BOLT);
+
+        SimpleHBaseMapper featureDBMapper = new SimpleHBaseMapper()
+                .withRowKeyField("id")
+                .withColumnFields(new Fields("id", "features"))
+                .withColumnFamily("data");
+        HBaseBolt hBaseFeatureBolt = new HBaseBolt("radish", featureDBMapper)
+                .withConfigKey("hbase.config");
+
+        builder.setBolt(FEATURE_DB_BOLT, hBaseFeatureBolt).shuffleGrouping(FEATURE_BOLT);
+
         return builder;
     }
 }
