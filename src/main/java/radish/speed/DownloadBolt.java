@@ -24,6 +24,10 @@ import java.util.Map;
 import java.util.UUID;
 
 public class DownloadBolt extends BaseRichBolt {
+    public static final String ID = "id";
+    public static final String KEYWORD = "keyword";
+    public static final String IMAGE_PATH = "image_path";
+
     private static final Logger logger = LoggerFactory.getLogger(DownloadBolt.class);
     private OutputCollector collector;
 
@@ -34,14 +38,14 @@ public class DownloadBolt extends BaseRichBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("id", "keyword", "image_path"));
+        declarer.declare(new Fields(ID, KEYWORD, IMAGE_PATH));
     }
 
     @Override
     public void execute(Tuple input) {
         logger.info("Processing tuple " + input);
-        String keyword = input.getStringByField("keyword");
-        String rawURL = input.getStringByField("image_url");
+        String keyword = input.getStringByField(TwitterSpout.KEYWORD);
+        String rawURL = input.getStringByField(TwitterSpout.IMAGE_URL);
 
         Configuration config = Config.getInstance().hadoopConfiguration;
 

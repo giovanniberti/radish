@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import radish.Config;
 import radish.HBaseUtils;
+import sun.print.DialogOwnerAccessor;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -40,8 +41,8 @@ public class FeatureBolt extends BaseRichBolt {
 
     @Override
     public void execute(Tuple input) {
-        String imageId = input.getStringByField("id");
-        String rawImagePath = input.getStringByField("image_path");
+        String imageId = input.getStringByField(DownloadBolt.ID);
+        String rawImagePath = input.getStringByField(DownloadBolt.IMAGE_PATH);
 
         try {
             FileSystem fs = FileSystem.get(Config.getInstance().hadoopConfiguration);

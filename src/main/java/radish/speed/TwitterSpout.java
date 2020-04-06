@@ -19,6 +19,9 @@ import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class TwitterSpout extends BaseRichSpout {
+    public static final String KEYWORD = "keyword";
+    public static final String IMAGE_URL = "image_url";
+
     private static final Logger logger = LoggerFactory.getLogger(TwitterSpout.class);
     private final String keyword;
     private final AccessToken accessToken;
@@ -67,7 +70,7 @@ public class TwitterSpout extends BaseRichSpout {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("keyword", "image_url"));
+        declarer.declare(new Fields(KEYWORD, IMAGE_URL));
     }
 
     @Override
