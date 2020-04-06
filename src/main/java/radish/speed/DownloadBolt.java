@@ -39,7 +39,7 @@ public class DownloadBolt extends BaseRichBolt {
 
     @Override
     public void execute(Tuple input) {
-        logger.info("### DOWNLOADING " + input);
+        logger.info("Processing tuple " + input);
         String keyword = input.getStringByField("keyword");
         String rawURL = input.getStringByField("image_url");
 
@@ -55,7 +55,7 @@ public class DownloadBolt extends BaseRichBolt {
                 fileStream.hsync();
             }
 
-            logger.info("### Finished downloading: " + path);
+            logger.info("Finished downloading: " + path);
             collector.emit(new Values(UUID.randomUUID().toString(), keyword, path.toString()));
             collector.ack(input);
         } catch (IOException e) {
