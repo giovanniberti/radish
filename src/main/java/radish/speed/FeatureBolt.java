@@ -26,6 +26,10 @@ import java.util.Base64;
 import java.util.Map;
 
 public class FeatureBolt extends BaseRichBolt {
+    public static final String ID = "id";
+    public static final String KEYWORD = "keyword";
+    public static final String FEATURES = "features";
+
     private static final Logger logger = LoggerFactory.getLogger(FeatureBolt.class);
     private OutputCollector collector;
 
@@ -36,12 +40,13 @@ public class FeatureBolt extends BaseRichBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("id", "features"));
+        declarer.declare(new Fields(ID, KEYWORD, FEATURES));
     }
 
     @Override
     public void execute(Tuple input) {
         String imageId = input.getStringByField(DownloadBolt.ID);
+        String keyword = input.getStringByField(DownloadBolt.KEYWORD);
         String rawImagePath = input.getStringByField(DownloadBolt.IMAGE_PATH);
 
         try {
@@ -57,11 +62,10 @@ public class FeatureBolt extends BaseRichBolt {
             GlobalFeature featureExtractor = new CEDD();
             featureExtractor.extract(imageData);
             double[] featureVector = featureExtractor.getFeatureVector();
-
             logger.info("Image {}: extracted feature vector {}", imageId, featureVector);
             Base64.Encoder encoder = Base64.getEncoder();
 
-            collector.emit(new Values(imageId, new String(encoder.encode(HBaseUtils.doubleArrayToBytes(featureVector)))));
+            collector.emit(new Values(imageId, keyword, new String(encoder.encode(HBaseUtils.doubleArrayToBytes(featureVector))))));
             collector.ack(input);
         } catch (IOException e) {
             collector.fail(input);
