@@ -9,7 +9,7 @@ import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import radish.HBaseUtils;
+import radish.utils.HBaseUtils;
 
 import java.util.Base64;
 import java.util.Map;

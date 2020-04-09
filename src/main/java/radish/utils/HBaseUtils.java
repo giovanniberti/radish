@@ -1,4 +1,4 @@
-package radish;
+package radish.utils;
 
 import org.apache.hadoop.io.Writable;
 

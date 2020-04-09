@@ -11,7 +11,7 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import radish.HBaseUtils;
+import radish.utils.HBaseUtils;
 
 import java.io.IOException;
 import java.util.*;

@@ -1,6 +1,7 @@
 package radish.batch;
 
 import org.apache.hadoop.io.Writable;
+import radish.utils.HBaseUtils;
 
 import java.io.DataInput;
 import java.io.DataOutput;
