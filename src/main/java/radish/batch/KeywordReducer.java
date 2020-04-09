@@ -14,8 +14,7 @@ import org.slf4j.LoggerFactory;
 import radish.HBaseUtils;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static radish.HBaseSchema.*;
@@ -65,33 +64,32 @@ public class KeywordReducer extends TableReducer<Text, ImageFeatureData, NullWri
         logger.info("Started k-means for {}", key);
 
         List<CentroidCluster<DoublePoint>> centroids = clusterer.cluster(points);
-        List<DoublePoint> clusterCenters = centroids.stream().map(c -> c.getCenter().getPoint()).map(DoublePoint::new).collect(Collectors.toList());
+        List<DoublePoint> clusterCentroids = centroids.stream().map(c -> c.getCenter().getPoint()).map(DoublePoint::new).collect(Collectors.toList());
         List<Integer> cardinalities = centroids.stream().map(c -> c.getPoints().size()).collect(Collectors.toList());
 
         logger.info("Computed k-means clusters for {}", key);
-        logger.info("Found cluster centers: {} with cardinalities: {}", clusterCenters, cardinalities);
-        logger.info("Images: {}", featureVectors.size());
+        logger.info("Found cluster centers: {} with cardinalities: {}", clusterCentroids, cardinalities);
 
-        for (ImageFeatureData value : values) {
-            logger.info("Adding centroid for image {}", value.imageId);
-            Put put = new Put(value.imageId.getBytes());
+
+
+        int clusterId = 1;
+        EuclideanDistance euclideanDistance = new EuclideanDistance();
+        for (DoublePoint clusterCentroid : clusterCentroids) {
+            double[] clusterCentroidVector = clusterCentroid.getPoint();
+            logger.info("Persisting cluster center: {}", Arrays.toString(clusterCentroidVector));
+
+            ImageFeatureData nearestImageFeatureData = values.stream()
+                    .min(Comparator.comparing(i -> euclideanDistance.compute(i.features, clusterCentroidVector)))
+                    .get();
+
+            Put put = new Put(new byte[]{(byte) clusterId});
             put.addColumn(DATA_COLUMN_FAMILY, KEYWORD_COLUMN, key.getBytes());
-
-            double[] nearestCentroid = getNearestCentroid(centroids, new DoublePoint(value.features));
-            put.addColumn(DATA_COLUMN_FAMILY, NEAREST_CENTROID_COLUMN, HBaseUtils.doubleArrayToBytes(nearestCentroid));
+            put.addColumn(DATA_COLUMN_FAMILY, CLUSTER_CENTROID_COLUMN, HBaseUtils.doubleArrayToBytes(clusterCentroidVector));
+            put.addColumn(DATA_COLUMN_FAMILY, NEAREST_POINT_COLUMN, nearestImageFeatureData.imageId.getBytes());
 
             context.write(NullWritable.get(), put);
+            clusterId++;
         }
-
-        /*
-        for (ImageFeatureData value : values) {
-            Put put = new Put(value.imageId.getBytes());
-            put.addColumn(DATA_COLUMN_FAMILY, KEYWORD_COLUMN, key.getBytes());
-            put.addColumn(DATA_COLUMN_FAMILY, NEAREST_CENTROID_COLUMN, "<dummy centroid>".getBytes());
-
-            context.write(NullWritable.get(), put);
-        }
-        */
 
         logger.info("#### End reduce for key {}", key);
     }
