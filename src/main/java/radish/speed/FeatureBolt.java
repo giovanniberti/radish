@@ -63,9 +63,8 @@ public class FeatureBolt extends BaseRichBolt {
             featureExtractor.extract(imageData);
             double[] featureVector = featureExtractor.getFeatureVector();
             logger.info("Image {}: extracted feature vector {}", imageId, featureVector);
-            Base64.Encoder encoder = Base64.getEncoder();
 
-            collector.emit(new Values(imageId, keyword, new String(encoder.encode(HBaseUtils.doubleArrayToBytes(featureVector))))));
+            collector.emit(new Values(imageId, keyword, featureVector));
             collector.ack(input);
         } catch (IOException e) {
             collector.fail(input);

@@ -26,6 +26,7 @@ public class RadishTopology extends ConfigurableTopology {
     private static final String DOWNLOAD_BOLT = "DOWNLOAD_BOLT";
     private static final String HBASE_BOLT = "HBASE_BOLT";
     private static final String FEATURE_BOLT = "FEATURE_BOLT";
+    private static final String FEATURE_MAPPER_BOLT = "FEATURE_MAPPER_BOLT";
     private static final String FEATURE_DB_BOLT = "FEATURE_DB_BOLT";
 
     public static void main(String[] args) throws Exception {
@@ -143,6 +144,8 @@ public class RadishTopology extends ConfigurableTopology {
 
         builder.setBolt(FEATURE_BOLT, new FeatureBolt()).shuffleGrouping(DOWNLOAD_BOLT);
 
+        builder.setBolt(FEATURE_MAPPER_BOLT, new FeatureMapperBolt()).shuffleGrouping(FEATURE_BOLT);
+
         SimpleHBaseMapper featureDBMapper = new SimpleHBaseMapper()
                 .withRowKeyField("id")
                 .withColumnFields(new Fields("id", "features"))
@@ -150,7 +153,7 @@ public class RadishTopology extends ConfigurableTopology {
         HBaseBolt hBaseFeatureBolt = new HBaseBolt("radish", featureDBMapper)
                 .withConfigKey("hbase.config");
 
-        builder.setBolt(FEATURE_DB_BOLT, hBaseFeatureBolt).shuffleGrouping(FEATURE_BOLT);
+        builder.setBolt(FEATURE_DB_BOLT, hBaseFeatureBolt).shuffleGrouping(FEATURE_MAPPER_BOLT);
 
         return builder;
     }
