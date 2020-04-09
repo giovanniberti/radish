@@ -7,4 +7,5 @@ public class HBaseSchema {
     public static final byte[] FEATURES_COLUMN = "features".getBytes();
     public static final byte[] CLUSTER_CENTROID_COLUMN = "cluster_center".getBytes();
     public static final byte[] NEAREST_POINT_COLUMN = "nearest_point".getBytes();
+    public static final byte[] IMAGE_PATH_COLUMN = "image_path".getBytes();
 }

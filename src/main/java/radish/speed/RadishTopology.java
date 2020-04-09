@@ -12,6 +12,7 @@ import org.apache.storm.tuple.Fields;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.LoggerFactory;
 import radish.Config;
+import radish.HBaseSchema;
 import twitter4j.auth.AccessToken;
 
 import java.util.ArrayList;
@@ -22,6 +23,7 @@ import java.util.Map;
 public class RadishTopology extends ConfigurableTopology {
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(RadishTopology.class);
 
+    public static final String BATCH_TABLE_NAME = "radish";
     private static final String TWITTER_SPOUT = "TWITTER_SPOUT";
     private static final String DOWNLOAD_BOLT = "DOWNLOAD_BOLT";
     private static final String HBASE_BOLT = "HBASE_BOLT";
@@ -133,11 +135,11 @@ public class RadishTopology extends ConfigurableTopology {
         builder.setBolt(DOWNLOAD_BOLT, new DownloadBolt()).shuffleGrouping(TWITTER_SPOUT);
 
         SimpleHBaseMapper mapper = new SimpleHBaseMapper()
-                .withRowKeyField("id")
-                .withColumnFields(new Fields("id", "keyword", "image_path"))
-                .withColumnFamily("data");
+                .withRowKeyField(DownloadBolt.ID)
+                .withColumnFields(new Fields(DownloadBolt.ID, DownloadBolt.KEYWORD, DownloadBolt.IMAGE_PATH))
+                .withColumnFamily(new String(HBaseSchema.DATA_COLUMN_FAMILY));
 
-        HBaseBolt hBaseBolt = new HBaseBolt("radish", mapper)
+        HBaseBolt hBaseBolt = new HBaseBolt(BATCH_TABLE_NAME, mapper)
                 .withConfigKey("hbase.config");
 
         builder.setBolt(HBASE_BOLT, hBaseBolt).shuffleGrouping(DOWNLOAD_BOLT);
@@ -147,10 +149,10 @@ public class RadishTopology extends ConfigurableTopology {
         builder.setBolt(FEATURE_MAPPER_BOLT, new FeatureMapperBolt()).shuffleGrouping(FEATURE_BOLT);
 
         SimpleHBaseMapper featureDBMapper = new SimpleHBaseMapper()
-                .withRowKeyField("id")
-                .withColumnFields(new Fields("id", "features"))
-                .withColumnFamily("data");
-        HBaseBolt hBaseFeatureBolt = new HBaseBolt("radish", featureDBMapper)
+                .withRowKeyField(FeatureBolt.ID)
+                .withColumnFields(new Fields(FeatureBolt.ID, FeatureBolt.KEYWORD, FeatureBolt.FEATURES))
+                .withColumnFamily(new String(HBaseSchema.DATA_COLUMN_FAMILY));
+        HBaseBolt hBaseFeatureBolt = new HBaseBolt(BATCH_TABLE_NAME, featureDBMapper)
                 .withConfigKey("hbase.config");
 
         builder.setBolt(FEATURE_DB_BOLT, hBaseFeatureBolt).shuffleGrouping(FEATURE_MAPPER_BOLT);

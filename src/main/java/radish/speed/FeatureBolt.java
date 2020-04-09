@@ -14,21 +14,18 @@ import org.apache.storm.tuple.Values;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import radish.Config;
-import radish.HBaseUtils;
-import sun.print.DialogOwnerAccessor;
+import radish.HBaseSchema;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
-import java.util.Base64;
 import java.util.Map;
 
 public class FeatureBolt extends BaseRichBolt {
-    public static final String ID = "id";
-    public static final String KEYWORD = "keyword";
-    public static final String FEATURES = "features";
+    public static final String ID = new String(HBaseSchema.ID_COLUMN);
+    public static final String KEYWORD = new String(HBaseSchema.KEYWORD_COLUMN);
+    public static final String FEATURES = new String(HBaseSchema.FEATURES_COLUMN);
 
     private static final Logger logger = LoggerFactory.getLogger(FeatureBolt.class);
     private OutputCollector collector;

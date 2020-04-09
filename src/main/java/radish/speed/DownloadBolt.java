@@ -15,6 +15,7 @@ import org.apache.storm.tuple.Values;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import radish.Config;
+import radish.HBaseSchema;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,9 +25,9 @@ import java.util.Map;
 import java.util.UUID;
 
 public class DownloadBolt extends BaseRichBolt {
-    public static final String ID = "id";
-    public static final String KEYWORD = "keyword";
-    public static final String IMAGE_PATH = "image_path";
+    public static final String ID = new String(HBaseSchema.ID_COLUMN);
+    public static final String KEYWORD = new String(HBaseSchema.KEYWORD_COLUMN);
+    public static final String IMAGE_PATH = new String(HBaseSchema.IMAGE_PATH_COLUMN);
 
     private static final Logger logger = LoggerFactory.getLogger(DownloadBolt.class);
     private OutputCollector collector;
