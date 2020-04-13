@@ -1,7 +1,7 @@
 package radish.batch;
 
 import org.apache.hadoop.io.Writable;
-import radish.utils.HBaseUtils;
+import radish.utils.HadoopUtils;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -25,22 +25,13 @@ class ImageFeatureData implements Writable {
     @Override
     public void write(DataOutput dataOutput) throws IOException {
         dataOutput.writeUTF(imageId);
-        dataOutput.writeInt(features.length);
-
-        for (double d : features) {
-            dataOutput.writeDouble(d);
-        }
+        HadoopUtils.writeDoubleArray(dataOutput, features);
     }
 
     @Override
     public void readFields(DataInput dataInput) throws IOException {
         imageId = dataInput.readUTF();
-        int length = dataInput.readInt();
-        features = new double[length];
-
-        for (int i = 0; i < length; i++) {
-            features[i] = dataInput.readDouble();
-        }
+        features = HadoopUtils.readDoubleArray(dataInput);
     }
 
     public static ImageFeatureData read(DataInput dataInput) throws IOException {
