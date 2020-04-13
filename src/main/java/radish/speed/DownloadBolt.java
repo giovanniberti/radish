@@ -61,7 +61,7 @@ public class DownloadBolt extends BaseRichBolt {
             }
 
             logger.info("Finished downloading: " + path);
-            collector.emit(new Values(UUID.randomUUID().toString(), keyword, path.toString()));
+            collector.emit(input, new Values(UUID.randomUUID().toString(), keyword, path.toString()));
             collector.ack(input);
         } catch (IOException e) {
             collector.fail(input);
