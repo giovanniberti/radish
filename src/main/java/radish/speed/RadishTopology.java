@@ -23,7 +23,7 @@ import java.util.Map;
 public class RadishTopology extends ConfigurableTopology {
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(RadishTopology.class);
 
-    public static final String BATCH_TABLE_NAME = "clusters";
+    public static final String IMAGES_TABLE_NAME = "images";
     public static final String SPEED_TABLE_NAME = "clusters_speed";
     private static final String TWITTER_SPOUT = "TWITTER_SPOUT";
     private static final String DOWNLOAD_BOLT = "DOWNLOAD_BOLT";
@@ -143,7 +143,7 @@ public class RadishTopology extends ConfigurableTopology {
                 .withColumnFields(new Fields(DownloadBolt.ID, DownloadBolt.KEYWORD, DownloadBolt.IMAGE_PATH))
                 .withColumnFamily(new String(HBaseSchema.DATA_COLUMN_FAMILY));
 
-        HBaseBolt hBaseBolt = new HBaseBolt(BATCH_TABLE_NAME, mapper)
+        HBaseBolt hBaseBolt = new HBaseBolt(IMAGES_TABLE_NAME, mapper)
                 .withConfigKey("hbase.config");
 
         builder.setBolt(HBASE_BOLT, hBaseBolt).shuffleGrouping(DOWNLOAD_BOLT);
@@ -156,7 +156,7 @@ public class RadishTopology extends ConfigurableTopology {
                 .withRowKeyField(FeatureBolt.ID)
                 .withColumnFields(new Fields(FeatureBolt.ID, FeatureBolt.FEATURES))
                 .withColumnFamily(new String(HBaseSchema.DATA_COLUMN_FAMILY));
-        HBaseBolt hBaseFeatureBolt = new HBaseBolt(BATCH_TABLE_NAME, featureDBMapper)
+        HBaseBolt hBaseFeatureBolt = new HBaseBolt(IMAGES_TABLE_NAME, featureDBMapper)
                 .withConfigKey("hbase.config");
 
         builder.setBolt(FEATURE_DB_BOLT, hBaseFeatureBolt).shuffleGrouping(FEATURE_MAPPER_BOLT);
