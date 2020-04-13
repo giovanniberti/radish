@@ -1,9 +1,9 @@
 package radish.speed;
 
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.*;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
@@ -25,7 +25,6 @@ public class SynchronizationSpout extends BaseRichSpout {
     public static final String CLUSTER_CENTROIDS = "cluster_centers";
     public static final String CLUSTER_NEAREST_POINTS = "cluster_nearest_points";
 
-    private static final String BATCH_CLUSTERS_TABLE = "radish";
     private static final Logger logger = LoggerFactory.getLogger(SynchronizationSpout.class);
 
     private final String keyword;
@@ -35,44 +34,6 @@ public class SynchronizationSpout extends BaseRichSpout {
     public SynchronizationSpout(String keyword) {
         this.keyword = keyword;
     }
-
-    /*
-    public double[] byteArrayToDoubles(byte[] raw) {
-        ByteBuffer bytes = ByteBuffer.wrap(raw);
-
-        int length = bytes.array().length / Double.BYTES;
-        double[] output = new double[length];
-        bytes.asDoubleBuffer().get(output);
-
-        return output;
-    }
-
-    public Scan getScanFilteredByKeyword(String keyword) {
-        Filter keywordFilter = new FilterBase() {
-            @Override
-            public ReturnCode filterCell(Cell c) {
-                byte[] family = c.getFamilyArray();
-                byte[] qualifier = c.getQualifierArray();
-
-                boolean familyMatch = Arrays.equals(family, HBaseSchema.DATA_COLUMN_FAMILY);
-                boolean qualifierMatch = Arrays.equals(qualifier, HBaseSchema.KEYWORD_COLUMN);
-                boolean keywordMatch = Arrays.equals(c.getValueArray(), keyword.getBytes());
-
-                if (familyMatch && qualifierMatch && keywordMatch) {
-                    return ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW;
-                } else {
-                    return ReturnCode.NEXT_COL;
-                }
-            }
-        };
-
-        Scan filteredScan = new Scan();
-        filteredScan.setOneRowLimit();
-        filteredScan.setFilter(keywordFilter);
-
-        return filteredScan;
-    }
-     */
 
     @Override
     public void open(Map<String, Object> conf, TopologyContext context, SpoutOutputCollector collector) {
@@ -92,10 +53,16 @@ public class SynchronizationSpout extends BaseRichSpout {
             timestampScan.addColumn(HBaseSchema.DATA_COLUMN_FAMILY, HBaseSchema.KEYWORD_COLUMN);
 
             Connection connection = ConnectionFactory.createConnection(HBaseConfiguration.create());
-            Table batchTable = connection.getTable(TableName.valueOf(BATCH_CLUSTERS_TABLE));
+            Table batchTable = connection.getTable(TableName.valueOf(RadishTopology.BATCH_TABLE_NAME));
 
             Result lastTimestampResult = batchTable.getScanner(timestampScan).next();
-            long lastTimestamp = lastTimestampResult.getColumnLatestCell(Bytes.toBytes("batch"), Bytes.toBytes("timestamp")).getTimestamp();
+            Cell latestCell = lastTimestampResult.getColumnLatestCell(HBaseSchema.DATA_COLUMN_FAMILY, HBaseSchema.NEAREST_POINT_COLUMN);
+
+            if (latestCell == null) {
+                logger.info("Cluster batch table is empty for keyword " + keyword);
+                return;
+            }
+            long lastTimestamp = latestCell.getTimestamp();
 
             if (this.lastBatchCompletedTimestamp < lastTimestamp) {
                 this.lastBatchCompletedTimestamp = lastTimestamp;
@@ -122,7 +89,7 @@ public class SynchronizationSpout extends BaseRichSpout {
                     clusterNearestPoints.add(clusterNearestPoint);
                 }
 
-                collector.emit(new Values(SUGAR_CANDY, this.keyword, clusterCentroids.toArray(), clusterNearestPoints.toArray()));
+                collector.emit(new Values(SUGAR_CANDY, keyword, clusterCentroids.toArray(), clusterNearestPoints.toArray()));
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
