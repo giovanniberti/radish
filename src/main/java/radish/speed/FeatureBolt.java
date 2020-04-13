@@ -51,18 +51,17 @@ public class FeatureBolt extends BaseRichBolt {
             Path imagePath = new Path(rawImagePath);
 
             InputStream imageInputStream = fs.open(imagePath);
-            logger.debug("imageInputStream = {}", imageInputStream);
-
             BufferedImage imageData = ImageIO.read(imageInputStream);
-            logger.debug("imageData = {}", imageData);
 
-            GlobalFeature featureExtractor = new CEDD();
-            featureExtractor.extract(imageData);
-            double[] featureVector = featureExtractor.getFeatureVector();
-            logger.info("Image {}: extracted feature vector {}", imageId, featureVector);
+            if (imageData != null) {
+                GlobalFeature featureExtractor = new CEDD();
+                featureExtractor.extract(imageData);
+                double[] featureVector = featureExtractor.getFeatureVector();
+                logger.info("Image {}: extracted feature vector {}", imageId, featureVector);
 
-            collector.emit(new Values(imageId, keyword, featureVector));
-            collector.ack(input);
+                collector.emit(input, new Values(imageId, keyword, featureVector));
+                collector.ack(input);
+            }
         } catch (IOException e) {
             collector.fail(input);
             e.printStackTrace();
