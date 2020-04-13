@@ -27,11 +27,14 @@ public class ImageDBMapper extends TableMapper<Text, ImageFeatureData> {
         logger.info("Mapping over image id: {}", imageId);
 
         byte[] featureData = value.getValue(DATA_COLUMN_FAMILY, FEATURES_COLUMN);
-        Base64.Decoder decoder = Base64.getDecoder();
 
-        double[] features = HBaseUtils.byteArrayToDoubles(decoder.decode(featureData));
+        if (featureData != null) {
+            Base64.Decoder decoder = Base64.getDecoder();
 
-        ImageFeatureData imageFeatureData = new ImageFeatureData(imageId, features);
-        context.write(keyword, imageFeatureData);
+            double[] features = HBaseUtils.byteArrayToDoubles(decoder.decode(featureData));
+
+            ImageFeatureData imageFeatureData = new ImageFeatureData(imageId, features);
+            context.write(keyword, imageFeatureData);
+        }
     }
 }
