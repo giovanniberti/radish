@@ -3,6 +3,7 @@ package radish.utils;
 import org.apache.hadoop.io.ArrayWritable;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.Writable;
+import radish.batch.kmeans.writables.DoubleArrayWritable;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -29,12 +30,14 @@ public class HadoopUtils {
         return result;
     }
 
-    public static ArrayWritable doubleArrayToWritable(double[] input) {
+    public static DoubleArrayWritable doubleArrayToWritable(double[] input) {
         DoubleWritable[] doubleWritables = Arrays.stream(input)
                 .mapToObj(DoubleWritable::new)
                 .toArray(DoubleWritable[]::new);
 
-        return new ArrayWritable(DoubleWritable.class, doubleWritables);
+        DoubleArrayWritable result = new DoubleArrayWritable();
+        result.set(doubleWritables);
+        return result;
     }
 
     public static double[] writableToDoubleArray(ArrayWritable input) {

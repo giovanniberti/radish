@@ -2,19 +2,25 @@ package radish.batch;
 
 import org.apache.commons.math3.ml.clustering.CentroidCluster;
 import org.apache.commons.math3.ml.clustering.DoublePoint;
-import org.apache.commons.math3.ml.clustering.KMeansPlusPlusClusterer;
 import org.apache.commons.math3.ml.distance.EuclideanDistance;
-import org.apache.commons.math3.random.JDKRandomGenerator;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.mapreduce.TableReducer;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import radish.batch.kmeans.KMeans;
+import radish.batch.kmeans.KMeansUtils;
 import radish.utils.HBaseUtils;
 
-import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
 import java.util.stream.Collectors;
 
 import static radish.HBaseSchema.*;
@@ -22,17 +28,8 @@ import static radish.HBaseSchema.*;
 public class KeywordReducer extends TableReducer<Text, ImageFeatureData, NullWritable> {
     private static final Logger logger = LoggerFactory.getLogger(KeywordReducer.class);
 
-    private static double[] getNearestCentroid(List<CentroidCluster<DoublePoint>> centroids, DoublePoint point) {
-        CentroidCluster<DoublePoint> nearestCentroid = centroids.stream()
-                .filter(c -> c.getPoints().contains(point))
-                .collect(Collectors.toList())
-                .get(0);
-
-        return nearestCentroid.getCenter().getPoint();
-    }
-
     @Override
-    protected void reduce(Text key, Iterable<ImageFeatureData> valuesIterable, Context context) throws IOException, InterruptedException {
+    protected void reduce(Text key, Iterable<ImageFeatureData> valuesIterable, Context context) {
         logger.info("Start reduce for key {}", key);
         ArrayList<ImageFeatureData> values = new ArrayList<>();
 
@@ -49,48 +46,48 @@ public class KeywordReducer extends TableReducer<Text, ImageFeatureData, NullWri
         }
 
         logger.info("Acquired feature data for key {}. {} feature vectors", key, featureVectors.size());
-        logger.warn("Sanity check: {}", !featureVectors.stream().allMatch(f -> f == featureVectors.get(0)));
-        List<DoublePoint> points = featureVectors.stream()
-                .map(DoublePoint::new)
-                .collect(Collectors.toList());
-
         logger.info("Starting k-means for {}", key);
-        KMeansPlusPlusClusterer<DoublePoint> clusterer = new KMeansPlusPlusClusterer<>(
-                3,
-                100_000,
-                new EuclideanDistance(),
-                new JDKRandomGenerator(),
-                KMeansPlusPlusClusterer.EmptyClusterStrategy.FARTHEST_POINT);
-        logger.info("Started k-means for {}", key);
+        try {
+            Configuration configuration = context.getConfiguration();
+            FileSystem fileSystem = FileSystem.get(configuration);
+            Path pointsDataPath = new Path("/points_" + key.toString());
 
-        List<CentroidCluster<DoublePoint>> centroids = clusterer.cluster(points);
-        List<DoublePoint> clusterCentroids = centroids.stream().map(c -> c.getCenter().getPoint()).map(DoublePoint::new).collect(Collectors.toList());
-        List<Integer> cardinalities = centroids.stream().map(c -> c.getPoints().size()).collect(Collectors.toList());
+            FSDataOutputStream outputStream = fileSystem.create(pointsDataPath, true);
+            String contents = featureVectors.stream().map(KMeansUtils::serializePoint).collect(Collectors.joining("\n"));
+            outputStream.writeChars(contents);
 
-        logger.info("Computed k-means clusters for {}", key);
-        logger.info("Found cluster centers: {} with cardinalities: {}", clusterCentroids, cardinalities);
+            logger.info("Started k-means for {}", key);
 
+            List<double[]> centroids = KMeans.cluster(3,
+                    100_000,
+                    key.toString(),
+                    featureVectors.get(0).length,
+                    pointsDataPath);
 
+            logger.info("Computed k-means clusters for {}", key);
+            logger.info("Found cluster centers: {}", centroids);
 
-        int clusterId = 1;
-        EuclideanDistance euclideanDistance = new EuclideanDistance();
-        for (DoublePoint clusterCentroid : clusterCentroids) {
-            double[] clusterCentroidVector = clusterCentroid.getPoint();
-            logger.info("Persisting cluster center: {}", Arrays.toString(clusterCentroidVector));
+            int clusterId = 1;
+            EuclideanDistance euclideanDistance = new EuclideanDistance();
+            for (double[] clusterCentroid : centroids) {
+                logger.info("Persisting cluster center: {}", Arrays.toString(clusterCentroid));
 
-            ImageFeatureData nearestImageFeatureData = values.stream()
-                    .min(Comparator.comparing(i -> euclideanDistance.compute(i.features, clusterCentroidVector)))
-                    .get();
+                ImageFeatureData nearestImageFeatureData = values.stream()
+                        .min(Comparator.comparing(i -> euclideanDistance.compute(i.features, clusterCentroid)))
+                        .get();
 
-            Put put = new Put(new byte[]{(byte) clusterId});
-            put.addColumn(DATA_COLUMN_FAMILY, KEYWORD_COLUMN, key.getBytes());
-            put.addColumn(DATA_COLUMN_FAMILY, CLUSTER_CENTROID_COLUMN, HBaseUtils.doubleArrayToBytes(clusterCentroidVector));
-            put.addColumn(DATA_COLUMN_FAMILY, NEAREST_POINT_COLUMN, nearestImageFeatureData.imageId.getBytes());
+                Put put = new Put(new byte[]{(byte) clusterId});
+                put.addColumn(DATA_COLUMN_FAMILY, KEYWORD_COLUMN, key.getBytes());
+                put.addColumn(DATA_COLUMN_FAMILY, CLUSTER_CENTROID_COLUMN, HBaseUtils.doubleArrayToBytes(clusterCentroid));
+                put.addColumn(DATA_COLUMN_FAMILY, NEAREST_POINT_COLUMN, nearestImageFeatureData.imageId.getBytes());
 
-            context.write(NullWritable.get(), put);
-            clusterId++;
+                context.write(NullWritable.get(), put);
+                clusterId++;
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            logger.info("#### End reduce for key {}", key);
         }
-
-        logger.info("#### End reduce for key {}", key);
     }
 }

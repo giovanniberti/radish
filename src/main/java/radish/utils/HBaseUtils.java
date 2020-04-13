@@ -1,12 +1,18 @@
 package radish.utils;
 
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.io.Writable;
+import radish.HBaseSchema;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 public class HBaseUtils {
     public static <T extends Writable> T readValue(byte[] rawData, Class<T> classRef) {
@@ -41,5 +47,31 @@ public class HBaseUtils {
         bytes.asDoubleBuffer().get(output);
 
         return output;
+    }
+
+    public static Scan getScanFilteredByKeyword(String keyword) {
+        Filter keywordFilter = new FilterBase() {
+            @Override
+            public ReturnCode filterCell(Cell c) {
+                byte[] family = c.getFamilyArray();
+                byte[] qualifier = c.getQualifierArray();
+
+                boolean familyMatch = Arrays.equals(family, HBaseSchema.DATA_COLUMN_FAMILY);
+                boolean qualifierMatch = Arrays.equals(qualifier, HBaseSchema.KEYWORD_COLUMN);
+                boolean keywordMatch = Arrays.equals(c.getValueArray(), keyword.getBytes());
+
+                if (familyMatch && qualifierMatch && keywordMatch) {
+                    return ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW;
+                } else {
+                    return ReturnCode.NEXT_COL;
+                }
+            }
+        };
+
+        Scan filteredScan = new Scan();
+        filteredScan.setOneRowLimit();
+        filteredScan.setFilter(keywordFilter);
+
+        return filteredScan;
     }
 }
