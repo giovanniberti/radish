@@ -69,7 +69,6 @@ public class HBaseUtils {
         };
 
         Scan filteredScan = new Scan();
-        filteredScan.setOneRowLimit();
         filteredScan.setFilter(keywordFilter);
 
         return filteredScan;
