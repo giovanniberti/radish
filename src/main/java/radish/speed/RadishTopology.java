@@ -23,13 +23,17 @@ import java.util.Map;
 public class RadishTopology extends ConfigurableTopology {
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(RadishTopology.class);
 
-    public static final String BATCH_TABLE_NAME = "radish";
+    public static final String BATCH_TABLE_NAME = "clusters";
+    public static final String SPEED_TABLE_NAME = "clusters_speed";
     private static final String TWITTER_SPOUT = "TWITTER_SPOUT";
     private static final String DOWNLOAD_BOLT = "DOWNLOAD_BOLT";
     private static final String HBASE_BOLT = "HBASE_BOLT";
     private static final String FEATURE_BOLT = "FEATURE_BOLT";
     private static final String FEATURE_MAPPER_BOLT = "FEATURE_MAPPER_BOLT";
     private static final String FEATURE_DB_BOLT = "FEATURE_DB_BOLT";
+    public static final String SYNCHRONIZATION_SPOUT = "SYNCHRONIZATION_SPOUT";
+    public static final String CLUSTER_BOLT = "CLUSTER_BOLT";
+    public static final String CLUSTER_SPEED_BOLT = "CLUSTER_SPEED_BOLT";
 
     public static void main(String[] args) throws Exception {
         String keyword = "apple";
@@ -150,12 +154,25 @@ public class RadishTopology extends ConfigurableTopology {
 
         SimpleHBaseMapper featureDBMapper = new SimpleHBaseMapper()
                 .withRowKeyField(FeatureBolt.ID)
-                .withColumnFields(new Fields(FeatureBolt.ID, FeatureBolt.KEYWORD, FeatureBolt.FEATURES))
+                .withColumnFields(new Fields(FeatureBolt.ID, FeatureBolt.FEATURES))
                 .withColumnFamily(new String(HBaseSchema.DATA_COLUMN_FAMILY));
         HBaseBolt hBaseFeatureBolt = new HBaseBolt(BATCH_TABLE_NAME, featureDBMapper)
                 .withConfigKey("hbase.config");
 
         builder.setBolt(FEATURE_DB_BOLT, hBaseFeatureBolt).shuffleGrouping(FEATURE_MAPPER_BOLT);
+
+        builder.setSpout(SYNCHRONIZATION_SPOUT, new SynchronizationSpout(keyword));
+        builder.setBolt(CLUSTER_BOLT, new ClusterBolt())
+                .shuffleGrouping(SYNCHRONIZATION_SPOUT)
+                .shuffleGrouping(FEATURE_BOLT);
+
+        SimpleHBaseMapper clusterMapper = new SimpleHBaseMapper()
+                .withColumnFamily(new String(HBaseSchema.DATA_COLUMN_FAMILY))
+                .withRowKeyField(ClusterBolt.CLUSTER_INDEX)
+                .withColumnFields(new Fields(ClusterBolt.CLUSTER_INDEX, ClusterBolt.KEYWORD, ClusterBolt.CLUSTER_CENTROID, ClusterBolt.CLUSTER_NEAREST_MEMBER));
+        HBaseBolt hBaseClusterBolt = new HBaseBolt(SPEED_TABLE_NAME, clusterMapper);
+
+        builder.setBolt(CLUSTER_SPEED_BOLT, hBaseClusterBolt);
 
         return builder;
     }
