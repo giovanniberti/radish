@@ -1,5 +1,6 @@
 package radish.speed;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
@@ -17,6 +18,7 @@ import radish.utils.HBaseUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Map;
 
 public class SynchronizationSpout extends BaseRichSpout {
@@ -24,6 +26,8 @@ public class SynchronizationSpout extends BaseRichSpout {
     public static final String KEYWORD = "keyword";
     public static final String CLUSTER_CENTROIDS = "cluster_centers";
     public static final String CLUSTER_NEAREST_POINTS = "cluster_nearest_points";
+    public static final String CLUSTER_NEAREST_POINT_IDS = "cluster_nearest_point_ids";
+    public static final String BATCH_TABLE_NAME = "clusters";
 
     private static final Logger logger = LoggerFactory.getLogger(SynchronizationSpout.class);
 
@@ -42,18 +46,18 @@ public class SynchronizationSpout extends BaseRichSpout {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields(SUGAR_CANDY, KEYWORD, CLUSTER_CENTROIDS, CLUSTER_NEAREST_POINTS));
+        declarer.declare(new Fields(SUGAR_CANDY, KEYWORD, CLUSTER_CENTROIDS, CLUSTER_NEAREST_POINTS, CLUSTER_NEAREST_POINT_IDS));
     }
 
     @Override
     public void nextTuple() {
         try {
-            Scan timestampScan = HBaseUtils.getScanFilteredByKeyword(this.keyword);
-            timestampScan.addColumn(HBaseSchema.DATA_COLUMN_FAMILY, HBaseSchema.CLUSTER_CENTROID_COLUMN);
+            Scan timestampScan = new Scan(); // HBaseUtils.getScanFilteredByKeyword(this.keyword);
+            timestampScan.addColumn(HBaseSchema.DATA_COLUMN_FAMILY, HBaseSchema.NEAREST_POINT_COLUMN);
             timestampScan.addColumn(HBaseSchema.DATA_COLUMN_FAMILY, HBaseSchema.KEYWORD_COLUMN);
 
             Connection connection = ConnectionFactory.createConnection(HBaseConfiguration.create());
-            Table batchTable = connection.getTable(TableName.valueOf(RadishTopology.BATCH_TABLE_NAME));
+            Table batchTable = connection.getTable(TableName.valueOf(BATCH_TABLE_NAME));
 
             Result lastTimestampResult = batchTable.getScanner(timestampScan).next();
             Cell latestCell = lastTimestampResult.getColumnLatestCell(HBaseSchema.DATA_COLUMN_FAMILY, HBaseSchema.NEAREST_POINT_COLUMN);
@@ -65,31 +69,40 @@ public class SynchronizationSpout extends BaseRichSpout {
             long lastTimestamp = latestCell.getTimestamp();
 
             if (this.lastBatchCompletedTimestamp < lastTimestamp) {
-                this.lastBatchCompletedTimestamp = lastTimestamp;
+                logger.info("Found more recent batch data");
 
-                Scan clusterCentersScan = HBaseUtils.getScanFilteredByKeyword(this.keyword);
+                Scan clusterCentersScan = new Scan(); // BaseUtils.getScanFilteredByKeyword(keyword);
                 clusterCentersScan.addColumn(HBaseSchema.DATA_COLUMN_FAMILY, HBaseSchema.CLUSTER_CENTROID_COLUMN);
                 clusterCentersScan.addColumn(HBaseSchema.DATA_COLUMN_FAMILY, HBaseSchema.KEYWORD_COLUMN);
                 clusterCentersScan.addColumn(HBaseSchema.DATA_COLUMN_FAMILY, HBaseSchema.NEAREST_POINT_COLUMN);
 
-                ArrayList<double[]> clusterCentroids = new ArrayList<>();
-                ArrayList<double[]> clusterNearestPoints = new ArrayList<>();
+                ArrayList<Double[]> clusterCentroids = new ArrayList<>();
+                ArrayList<Double[]> clusterNearestPoints = new ArrayList<>();
+                ArrayList<String> clusterNearestPointIds = new ArrayList<>();
                 ResultScanner scanner = batchTable.getScanner(clusterCentersScan);
                 for (Result result : scanner) {
-                    byte[] clusterCentroidBytes = result.getColumnLatestCell(HBaseSchema.DATA_COLUMN_FAMILY, HBaseSchema.CLUSTER_CENTROID_COLUMN).getValueArray();
+                    byte[] clusterCentroidBytes = result.getValue(HBaseSchema.DATA_COLUMN_FAMILY, HBaseSchema.CLUSTER_CENTROID_COLUMN);
                     double[] clusterCentroid = HBaseUtils.byteArrayToDoubles(clusterCentroidBytes);
-                    clusterCentroids.add(clusterCentroid);
+                    clusterCentroids.add(ArrayUtils.toObject(clusterCentroid));
 
-                    byte[] nearestPointId = result.getColumnLatestCell(HBaseSchema.DATA_COLUMN_FAMILY, HBaseSchema.NEAREST_POINT_COLUMN).getValueArray();
+                    byte[] nearestPointId = result.getValue(HBaseSchema.DATA_COLUMN_FAMILY, HBaseSchema.NEAREST_POINT_COLUMN);
+                    clusterNearestPointIds.add(new String(nearestPointId));
+
                     Get getNearestPoint = new Get(nearestPointId);
-                    Result nearestPointResult = batchTable.get(getNearestPoint);
+                    Connection joinConnection = ConnectionFactory.createConnection(HBaseConfiguration.create());
+                    Table imagesTable = joinConnection.getTable(TableName.valueOf(RadishTopology.IMAGES_TABLE_NAME));
+                    Result nearestPointResult = imagesTable.get(getNearestPoint);
 
                     byte[] nearestPointFeaturesBytes = nearestPointResult.getValue(HBaseSchema.DATA_COLUMN_FAMILY, HBaseSchema.FEATURES_COLUMN);
-                    double[] clusterNearestPoint = HBaseUtils.byteArrayToDoubles(nearestPointFeaturesBytes);
-                    clusterNearestPoints.add(clusterNearestPoint);
+                    Base64.Decoder decoder = Base64.getDecoder();
+                    double[] clusterNearestPoint = HBaseUtils.byteArrayToDoubles(decoder.decode(nearestPointFeaturesBytes));
+                    clusterNearestPoints.add(ArrayUtils.toObject(clusterNearestPoint));
                 }
 
-                collector.emit(new Values(SUGAR_CANDY, keyword, clusterCentroids.toArray(), clusterNearestPoints.toArray()));
+                collector.emit(new Values(SUGAR_CANDY, keyword, clusterCentroids, clusterNearestPoints, clusterNearestPointIds));
+                this.lastBatchCompletedTimestamp = lastTimestamp;
+            } else {
+                logger.info("New batch not ready: {} >= {}", this.lastBatchCompletedTimestamp, lastTimestamp);
             }
         } catch (IOException e) {
             throw new RuntimeException(e);

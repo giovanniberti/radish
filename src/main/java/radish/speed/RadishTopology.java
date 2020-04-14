@@ -169,10 +169,10 @@ public class RadishTopology extends ConfigurableTopology {
         SimpleHBaseMapper clusterMapper = new SimpleHBaseMapper()
                 .withColumnFamily(new String(HBaseSchema.DATA_COLUMN_FAMILY))
                 .withRowKeyField(ClusterBolt.CLUSTER_INDEX)
-                .withColumnFields(new Fields(ClusterBolt.CLUSTER_INDEX, ClusterBolt.KEYWORD, ClusterBolt.CLUSTER_CENTROID, ClusterBolt.CLUSTER_NEAREST_MEMBER));
+                .withColumnFields(new Fields(ClusterBolt.CLUSTER_INDEX, ClusterBolt.KEYWORD, ClusterBolt.CLUSTER_CENTROID, ClusterBolt.CLUSTER_NEAREST_MEMBER, ClusterBolt.CLUSTER_NEAREST_MEMBER_ID));
         HBaseBolt hBaseClusterBolt = new HBaseBolt(SPEED_TABLE_NAME, clusterMapper);
 
-        builder.setBolt(CLUSTER_SPEED_BOLT, hBaseClusterBolt);
+        builder.setBolt(CLUSTER_SPEED_BOLT, hBaseClusterBolt).shuffleGrouping(CLUSTER_BOLT);
 
         return builder;
     }
