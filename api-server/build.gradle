@@ -1,0 +1,42 @@
+plugins {
+    id 'org.springframework.boot' version '2.2.6.RELEASE'
+    id 'io.spring.dependency-management' version '1.0.9.RELEASE'
+    id 'java'
+}
+
+group = 'radish'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '11'
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+configurations.all {
+    exclude group: 'org.slf4j", module: "slf4j-simple'
+    exclude group: 'org.slf4j', module: 'log4j-over-slf4j'
+    exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    testImplementation('org.springframework.boot:spring-boot-starter-test') {
+        exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+    }
+    implementation group: 'org.apache.hbase', name: 'hbase-client', version: '2.2.3'
+    implementation group: 'org.apache.hbase', name: 'hbase-mapreduce', version: '2.2.3'
+    implementation group: 'ch.qos.logback', name: "logback-classic", version: "1.2.3"
+}
+
+test {
+    useJUnitPlatform()
+}
