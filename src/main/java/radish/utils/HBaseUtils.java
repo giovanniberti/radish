@@ -44,7 +44,9 @@ public class HBaseUtils {
 
         int length = bytes.array().length / Double.BYTES;
         double[] output = new double[length];
-        bytes.asDoubleBuffer().get(output);
+        for (int i = 0; i < output.length; i++) {
+            output[i] = bytes.getDouble(i);
+        }
 
         return output;
     }
